@@ -5,6 +5,7 @@ import 'package:expense_tracker/bloc/expense_bloc.dart';
 import 'package:expense_tracker/bloc/theme_cubit.dart';
 import 'package:expense_tracker/screens/add_expense_screen.dart';
 import 'package:expense_tracker/screens/insights_screen.dart';
+import 'package:expense_tracker/screens/month_detail_screen.dart';
 import 'package:expense_tracker/widgets/expense_tile.dart';
 import 'package:expense_tracker/widgets/animated_fab.dart';
 
@@ -223,6 +224,28 @@ class _HomeScreenState extends State<HomeScreen>
                             amount: currencyFormat.format(thisMonthTotal),
                             icon: Icons.date_range,
                             color: theme.colorScheme.secondary,
+                            onTap: () {
+                              Navigator.push(
+                                context,
+                                PageRouteBuilder(
+                                  pageBuilder: (context, animation, secondaryAnimation) =>
+                                      const MonthDetailScreen(),
+                                  transitionsBuilder: (context, animation, secondaryAnimation, child) {
+                                    return SlideTransition(
+                                      position: Tween<Offset>(
+                                        begin: const Offset(0, 0.3),
+                                        end: Offset.zero,
+                                      ).animate(CurvedAnimation(
+                                        parent: animation,
+                                        curve: Curves.easeOutCubic,
+                                      )),
+                                      child: FadeTransition(opacity: animation, child: child),
+                                    );
+                                  },
+                                  transitionDuration: const Duration(milliseconds: 400),
+                                ),
+                              );
+                            },
                           ),
                         ),
                       ],
@@ -300,50 +323,60 @@ class _SummaryCard extends StatelessWidget {
   final String amount;
   final IconData icon;
   final Color color;
+  final VoidCallback? onTap;
 
   const _SummaryCard({
     required this.title,
     required this.amount,
     required this.icon,
     required this.color,
+    this.onTap,
   });
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(6),
-                  decoration: BoxDecoration(
-                    color: color.withAlpha(30),
-                    borderRadius: BorderRadius.circular(8),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(12),
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(6),
+                    decoration: BoxDecoration(
+                      color: color.withAlpha(30),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Icon(icon, size: 18, color: color),
                   ),
-                  child: Icon(icon, size: 18, color: color),
+                  if (onTap != null) ...[
+                    const Spacer(),
+                    Icon(Icons.chevron_right, size: 18, color: theme.colorScheme.onSurfaceVariant.withAlpha(120)),
+                  ],
+                ],
+              ),
+              const SizedBox(height: 12),
+              Text(
+                amount,
+                style: theme.textTheme.titleLarge?.copyWith(
+                  fontWeight: FontWeight.bold,
                 ),
-              ],
-            ),
-            const SizedBox(height: 12),
-            Text(
-              amount,
-              style: theme.textTheme.titleLarge?.copyWith(
-                fontWeight: FontWeight.bold,
               ),
-            ),
-            const SizedBox(height: 4),
-            Text(
-              title,
-              style: theme.textTheme.bodySmall?.copyWith(
-                color: theme.colorScheme.onSurfaceVariant,
+              const SizedBox(height: 4),
+              Text(
+                title,
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: theme.colorScheme.onSurfaceVariant,
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
