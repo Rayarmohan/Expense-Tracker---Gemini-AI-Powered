@@ -56,12 +56,21 @@ class GeminiService {
       debugPrint('========== GEMINI SCAN ERROR ==========');
       debugPrint('Error: $e');
       debugPrint('=======================================');
+      final errMsg = e.toString();
+      String userFriendlyError;
+      if (errMsg.contains('SocketException') || errMsg.contains('failed host lookup')) {
+        userFriendlyError = 'No internet connection. Please check your network and try again.';
+      } else if (errMsg.contains('API key')) {
+        userFriendlyError = 'Invalid API key. Please check your .env configuration.';
+      } else {
+        userFriendlyError = 'Failed to scan receipt. Please try again.';
+      }
       return {
         'merchant_name': null,
         'date': null,
         'amount': null,
         'category': null,
-        'error': 'Failed to scan receipt: ${e.toString()}',
+        'error': userFriendlyError,
       };
     }
   }
