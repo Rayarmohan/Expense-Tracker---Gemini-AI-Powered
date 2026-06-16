@@ -58,4 +58,8 @@ class ExpenseRepository {
   double getTotalByMonth(int year, int month) {
     return getByMonth(year, month).fold(0.0, (sum, e) => sum + e.amount);
   }
+
+  Future<void> clearAll() async {
+    await _box.clear();
+  }
 }

@@ -79,6 +79,8 @@ class ScanReceipt extends ExpenseEvent {
 
 class ClearScanResult extends ExpenseEvent {}
 
+class ClearAllData extends ExpenseEvent {}
+
 class GenerateInsights extends ExpenseEvent {}
 
 // States
@@ -156,6 +158,7 @@ class ExpenseBloc extends Bloc<ExpenseEvent, ExpenseState> {
     on<DeleteExpense>(_onDeleteExpense);
     on<ScanReceipt>(_onScanReceipt);
     on<ClearScanResult>(_onClearScanResult);
+    on<ClearAllData>(_onClearAllData);
     on<GenerateInsights>(_onGenerateInsights);
   }
 
@@ -247,6 +250,15 @@ class ExpenseBloc extends Bloc<ExpenseEvent, ExpenseState> {
   void _onClearScanResult(ClearScanResult event, Emitter<ExpenseState> emit) {
     if (state is ExpenseLoaded) {
       emit((state as ExpenseLoaded).copyWith(scanResult: null));
+    }
+  }
+
+  Future<void> _onClearAllData(ClearAllData event, Emitter<ExpenseState> emit) async {
+    try {
+      await _repository.clearAll();
+      emit(ExpenseLoaded(expenses: []));
+    } catch (e) {
+      emit(ExpenseError(message: 'Failed to clear data: $e'));
     }
   }
 

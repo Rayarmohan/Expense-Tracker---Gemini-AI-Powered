@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:intl/intl.dart';
 import 'package:expense_tracker/bloc/expense_bloc.dart';
-import 'package:expense_tracker/bloc/theme_cubit.dart';
 import 'package:expense_tracker/screens/add_expense_screen.dart';
 import 'package:expense_tracker/screens/insights_screen.dart';
 import 'package:expense_tracker/screens/month_detail_screen.dart';
@@ -125,15 +124,6 @@ class _HomeScreenState extends State<HomeScreen>
       appBar: AppBar(
         title: const Text('Expense Tracker'),
         actions: [
-          IconButton(
-            icon: Icon(
-              context.watch<ThemeCubit>().state == ThemeMode.dark
-                  ? Icons.light_mode
-                  : Icons.dark_mode,
-            ),
-            onPressed: () => context.read<ThemeCubit>().toggleTheme(),
-            tooltip: 'Toggle theme',
-          ),
           IconButton(
             icon: const Icon(Icons.insights),
             onPressed: () {

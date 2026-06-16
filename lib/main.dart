@@ -8,7 +8,8 @@ import 'package:expense_tracker/bloc/expense_bloc.dart';
 import 'package:expense_tracker/bloc/theme_cubit.dart';
 import 'package:expense_tracker/services/gemini_service.dart';
 import 'package:expense_tracker/models/expense.dart';
-import 'package:expense_tracker/screens/home_screen.dart';
+import 'package:expense_tracker/screens/main_shell.dart';
+import 'package:expense_tracker/screens/onboarding_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -21,10 +22,14 @@ void main() async {
 
   final geminiService = GeminiService();
 
+  final settingsBox = await Hive.openBox('app_settings');
+  final onboardingDone = settingsBox.get('onboarding_done', defaultValue: false) as bool;
+
   runApp(
     ExpenseTrackerApp(
       repository: repository,
       geminiService: geminiService,
+      onboardingDone: onboardingDone,
     ),
   );
 }
@@ -32,11 +37,13 @@ void main() async {
 class ExpenseTrackerApp extends StatelessWidget {
   final ExpenseRepository repository;
   final GeminiService geminiService;
+  final bool onboardingDone;
 
   const ExpenseTrackerApp({
     super.key,
     required this.repository,
     required this.geminiService,
+    required this.onboardingDone,
   });
 
   @override
@@ -59,7 +66,11 @@ class ExpenseTrackerApp extends StatelessWidget {
             theme: AppTheme.light(),
             darkTheme: AppTheme.dark(),
             themeMode: themeMode,
-            home: const HomeScreen(),
+            initialRoute: onboardingDone ? '/home' : '/onboarding',
+            routes: {
+              '/home': (_) => const MainShell(),
+              '/onboarding': (_) => const OnboardingScreen(),
+            },
           );
         },
       ),
