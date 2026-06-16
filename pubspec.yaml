@@ -1,0 +1,30 @@
+name: expense_tracker
+description: "Expense Tracker with AI-Powered Receipt Scanning & Spending Insights"
+publish_to: 'none'
+version: 1.0.0+1
+
+environment:
+  sdk: ^3.11.5
+
+dependencies:
+  flutter:
+    sdk: flutter
+  cupertino_icons: ^1.0.8
+  flutter_bloc: ^9.1.0
+  equatable: ^2.0.7
+  hive_flutter: ^1.1.0
+  image_picker: ^1.1.2
+  google_generative_ai: ^0.4.7
+  flutter_dotenv: ^5.2.1
+  intl: ^0.20.2
+  uuid: ^4.5.1
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0
+
+flutter:
+  uses-material-design: true
+  assets:
+    - .env
