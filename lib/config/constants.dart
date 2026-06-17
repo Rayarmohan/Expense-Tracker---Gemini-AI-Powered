@@ -1,5 +1,5 @@
 class AppConstants {
-  static const String appName = 'Expense Tracker';
+  static const String appName = 'Smart Spend';
   static const String geminiApiKeyKey = 'GEMINI_API_KEY';
   static const String expensesBoxKey = 'expenses_box';
   static const String expensesListKey = 'expenses_list';
