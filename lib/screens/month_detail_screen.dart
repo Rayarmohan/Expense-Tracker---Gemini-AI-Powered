@@ -4,8 +4,8 @@ import 'package:fl_chart/fl_chart.dart';
 import 'package:intl/intl.dart';
 import 'package:expense_tracker/bloc/expense_bloc.dart';
 import 'package:expense_tracker/bloc/expense_state.dart';
-import 'package:expense_tracker/config/constants.dart';
-import 'package:expense_tracker/models/expense.dart';
+import 'package:expense_tracker/functions/month_functions.dart';
+import 'package:expense_tracker/models/category_data.dart';
 
 class MonthDetailScreen extends StatefulWidget {
   const MonthDetailScreen({super.key});
@@ -68,7 +68,7 @@ class _MonthDetailScreenState extends State<MonthDetailScreen>
               e.date.month == now.month && e.date.year == now.year).toList();
           final total = thisMonth.fold(0.0, (sum, e) => sum + e.amount);
 
-          final categoryData = _buildCategoryData(thisMonth);
+          final categoryData = buildCategoryData(thisMonth);
 
           return SingleChildScrollView(
             physics: const BouncingScrollPhysics(),
@@ -149,22 +149,7 @@ class _MonthDetailScreenState extends State<MonthDetailScreen>
     );
   }
 
-  List<_CategoryData> _buildCategoryData(List<Expense> expenses) {
-    final map = <String, double>{};
-    for (final e in expenses) {
-      map[e.category] = (map[e.category] ?? 0) + e.amount;
-    }
-    return map.entries.map((e) {
-      return _CategoryData(
-        category: e.key,
-        amount: e.value,
-        color: Color(AppConstants.categoryColors[e.key] ?? 0xFFDDA0DD),
-      );
-    }).toList()
-      ..sort((a, b) => b.amount.compareTo(a.amount));
-  }
-
-  Widget _buildPieChart(ThemeData theme, List<_CategoryData> data) {
+  Widget _buildPieChart(ThemeData theme, List<CategoryData> data) {
     if (data.isEmpty) {
       return Container(
         height: 220,
@@ -226,7 +211,7 @@ class _MonthDetailScreenState extends State<MonthDetailScreen>
                 ),
                 sectionsSpace: 2,
                 centerSpaceRadius: 50,
-                sections: _buildPieSections(data),
+                sections: buildPieSections(data, _touchedIndex),
               ),
               duration: const Duration(milliseconds: 800),
             ),
@@ -247,45 +232,10 @@ class _MonthDetailScreenState extends State<MonthDetailScreen>
     );
   }
 
-  List<PieChartSectionData> _buildPieSections(List<_CategoryData> data) {
-    final total = data.fold(0.0, (sum, d) => sum + d.amount);
-    return data.asMap().entries.map((entry) {
-      final i = entry.key;
-      final d = entry.value;
-      final isTouched = i == _touchedIndex;
-      final percentage = total > 0 ? (d.amount / total * 100) : 0.0;
-      final radius = isTouched ? 65.0 : 55.0;
-
-      return PieChartSectionData(
-        color: d.color,
-        value: d.amount,
-        title: '${percentage.toStringAsFixed(0)}%',
-        radius: radius,
-        titleStyle: TextStyle(
-          fontSize: isTouched ? 14 : 12,
-          fontWeight: FontWeight.bold,
-          color: Colors.white,
-          shadows: const [Shadow(color: Colors.black26, blurRadius: 2)],
-        ),
-        badgeWidget: isTouched
-            ? Container(
-                padding: const EdgeInsets.all(4),
-                decoration: BoxDecoration(
-                  color: d.color,
-                  shape: BoxShape.circle,
-                ),
-                child: Icon(Icons.circle, size: 8, color: Colors.white),
-              )
-            : null,
-        badgePositionPercentageOffset: 1.3,
-      );
-    }).toList();
-  }
-
   Widget _buildCategoryBreakdown(
     ThemeData theme,
     NumberFormat currencyFormat,
-    List<_CategoryData> data,
+    List<CategoryData> data,
     double total,
   ) {
     if (data.isEmpty) return const SizedBox.shrink();
@@ -338,7 +288,7 @@ class _MonthDetailScreenState extends State<MonthDetailScreen>
   Widget _buildCategoryItem(
     ThemeData theme,
     NumberFormat currencyFormat,
-    _CategoryData data,
+    CategoryData data,
     double percentage,
     Duration delay,
   ) {
@@ -401,16 +351,4 @@ class _MonthDetailScreenState extends State<MonthDetailScreen>
       ),
     );
   }
-}
-
-class _CategoryData {
-  final String category;
-  final double amount;
-  final Color color;
-
-  _CategoryData({
-    required this.category,
-    required this.amount,
-    required this.color,
-  });
 }

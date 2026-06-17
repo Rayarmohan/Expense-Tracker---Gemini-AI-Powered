@@ -7,6 +7,7 @@ import 'package:expense_tracker/bloc/expense_bloc.dart';
 import 'package:expense_tracker/bloc/expense_event.dart';
 import 'package:expense_tracker/bloc/expense_state.dart';
 import 'package:expense_tracker/config/constants.dart';
+import 'package:expense_tracker/functions/add_expense_functions.dart';
 import 'package:expense_tracker/models/expense.dart';
 
 class AddExpenseScreen extends StatefulWidget {
@@ -70,27 +71,12 @@ class _AddExpenseScreenState extends State<AddExpenseScreen>
   }
 
   void _applyScanResult(Map<String, dynamic> result) {
-    debugPrint('========== APPLYING SCAN RESULT ==========');
-    debugPrint('Result: $result');
-    if (result['merchant_name'] != null) {
-      _titleController.text = result['merchant_name'] as String;
-      debugPrint('Set title: ${result['merchant_name']}');
-    }
-    if (result['amount'] != null) {
-      _amountController.text = (result['amount'] as num).toStringAsFixed(0);
-      debugPrint('Set amount: ${result['amount']}');
-    }
-    if (result['date'] != null) {
-      _selectedDate = DateTime.tryParse(result['date'] as String) ?? DateTime.now();
-      debugPrint('Set date: $_selectedDate (from ${result['date']})');
-    }
-    if (result['category'] != null &&
-        AppConstants.categories.contains(result['category'])) {
-      _selectedCategory = result['category'] as String;
-      debugPrint('Set category: ${result['category']}');
-    }
+    final data = processScanResult(result);
+    if (data.title != null) _titleController.text = data.title!;
+    if (data.amount != null) _amountController.text = data.amount!;
+    if (data.date != null) _selectedDate = data.date!;
+    if (data.category != null) _selectedCategory = data.category!;
     if (mounted) setState(() {});
-    debugPrint('=========================================');
   }
 
   @override
@@ -103,93 +89,20 @@ class _AddExpenseScreenState extends State<AddExpenseScreen>
   }
 
   Future<void> _pickImage(ImageSource source) async {
-    final picker = ImagePicker();
-    final image = await picker.pickImage(source: source, maxWidth: 1024);
-    if (image != null) {
+    final file = await pickImageFromSource(source);
+    if (file != null) {
       setState(() {
-        _pendingImageFile = File(image.path);
-        _receiptImagePath = image.path;
+        _pendingImageFile = file;
+        _receiptImagePath = file.path;
       });
       if (!isEditing && mounted) {
-        context.read<ExpenseBloc>().add(ScanReceipt(imageFile: File(image.path)));
+        context.read<ExpenseBloc>().add(ScanReceipt(imageFile: file));
       }
     }
   }
 
-  void _showImageSourceDialog() {
-    showModalBottomSheet(
-      context: context,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      builder: (ctx) => SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.all(20),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Container(
-                width: 40,
-                height: 4,
-                decoration: BoxDecoration(
-                  color: Colors.grey.shade300,
-                  borderRadius: BorderRadius.circular(2),
-                ),
-              ),
-              const SizedBox(height: 20),
-              Text(
-                'Scan Receipt',
-                style: Theme.of(ctx).textTheme.titleLarge?.copyWith(
-                      fontWeight: FontWeight.bold,
-                    ),
-              ),
-              const SizedBox(height: 20),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                children: [
-                  _ImageSourceButton(
-                    icon: Icons.camera_alt,
-                    label: 'Camera',
-                    onTap: () {
-                      Navigator.pop(ctx);
-                      _pickImage(ImageSource.camera);
-                    },
-                  ),
-                  _ImageSourceButton(
-                    icon: Icons.photo_library,
-                    label: 'Gallery',
-                    onTap: () {
-                      Navigator.pop(ctx);
-                      _pickImage(ImageSource.gallery);
-                    },
-                  ),
-                ],
-              ),
-              const SizedBox(height: 20),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
   Future<void> _selectDate() async {
-    final date = await showDatePicker(
-      context: context,
-      initialDate: _selectedDate,
-      firstDate: DateTime(2020),
-      lastDate: DateTime.now(),
-      builder: (context, child) => Theme(
-        data: Theme.of(context).copyWith(
-          datePickerTheme: DatePickerThemeData(
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(16),
-            ),
-          ),
-        ),
-        child: child!,
-      ),
-    );
+    final date = await pickDate(context, _selectedDate);
     if (date != null) {
       setState(() => _selectedDate = date);
     }
@@ -197,37 +110,16 @@ class _AddExpenseScreenState extends State<AddExpenseScreen>
 
   void _submit() {
     if (!_formKey.currentState!.validate()) return;
-
-    final bloc = context.read<ExpenseBloc>();
-    final title = _titleController.text.trim();
-    final amount = double.parse(_amountController.text.trim());
-
-    if (isEditing) {
-      bloc.add(UpdateExpense(
-        id: widget.expense!.id,
-        title: title,
-        amount: amount,
-        category: _selectedCategory,
-        date: _selectedDate,
-        notes: _notesController.text.trim().isEmpty
-            ? null
-            : _notesController.text.trim(),
-        receiptImagePath: _receiptImagePath,
-      ));
-    } else {
-      bloc.add(AddExpense(
-        title: title,
-        amount: amount,
-        category: _selectedCategory,
-        date: _selectedDate,
-        notes: _notesController.text.trim().isEmpty
-            ? null
-            : _notesController.text.trim(),
-        receiptImagePath: _receiptImagePath,
-      ));
-    }
-
-    Navigator.pop(context);
+    submitExpense(
+      context,
+      title: _titleController.text.trim(),
+      amount: double.parse(_amountController.text.trim()),
+      date: _selectedDate,
+      category: _selectedCategory,
+      notes: _notesController.text.trim(),
+      receiptImagePath: _receiptImagePath,
+      existingId: isEditing ? widget.expense!.id : null,
+    );
   }
 
   @override
@@ -274,7 +166,11 @@ class _AddExpenseScreenState extends State<AddExpenseScreen>
                     children: [
                       if (!isEditing) ...[
                         GestureDetector(
-                          onTap: _showImageSourceDialog,
+                          onTap: () => showImageSourceDialog(
+                            context,
+                            onCameraTap: () => _pickImage(ImageSource.camera),
+                            onGalleryTap: () => _pickImage(ImageSource.gallery),
+                          ),
                           child: AnimatedContainer(
                             duration: const Duration(milliseconds: 300),
                             height: 160,
@@ -469,40 +365,6 @@ class _AddExpenseScreenState extends State<AddExpenseScreen>
           );
         },
       ),
-      ),
-    );
-  }
-}
-
-class _ImageSourceButton extends StatelessWidget {
-  final IconData icon;
-  final String label;
-  final VoidCallback onTap;
-
-  const _ImageSourceButton({
-    required this.icon,
-    required this.label,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 200),
-        padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 20),
-        decoration: BoxDecoration(
-          color: Theme.of(context).colorScheme.surfaceContainerHighest,
-          borderRadius: BorderRadius.circular(16),
-        ),
-        child: Column(
-          children: [
-            Icon(icon, size: 36, color: Theme.of(context).colorScheme.primary),
-            const SizedBox(height: 8),
-            Text(label, style: Theme.of(context).textTheme.bodyMedium),
-          ],
-        ),
       ),
     );
   }

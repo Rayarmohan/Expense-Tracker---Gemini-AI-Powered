@@ -4,11 +4,12 @@ import 'package:intl/intl.dart';
 import 'package:expense_tracker/bloc/expense_bloc.dart';
 import 'package:expense_tracker/bloc/expense_event.dart';
 import 'package:expense_tracker/bloc/expense_state.dart';
-import 'package:expense_tracker/screens/add_expense_screen.dart';
+import 'package:expense_tracker/functions/home_functions.dart';
 import 'package:expense_tracker/screens/insights_screen.dart';
 import 'package:expense_tracker/screens/month_detail_screen.dart';
 import 'package:expense_tracker/widgets/expense_tile.dart';
 import 'package:expense_tracker/widgets/animated_fab.dart';
+import 'package:expense_tracker/widgets/summary_card.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -36,85 +37,6 @@ class _HomeScreenState extends State<HomeScreen>
   void dispose() {
     _fabController.dispose();
     super.dispose();
-  }
-
-  void _navigateToAddExpense({bool scan = false}) {
-    Navigator.push(
-      context,
-      PageRouteBuilder(
-        pageBuilder: (context, animation, secondaryAnimation) =>
-            AddExpenseScreen(autoScan: scan),
-        transitionsBuilder: (context, animation, secondaryAnimation, child) {
-          return SlideTransition(
-            position: Tween<Offset>(
-              begin: const Offset(0, 0.3),
-              end: Offset.zero,
-            ).animate(CurvedAnimation(
-              parent: animation,
-              curve: Curves.easeOutCubic,
-            )),
-            child: FadeTransition(opacity: animation, child: child),
-          );
-        },
-        transitionDuration: const Duration(milliseconds: 400),
-      ),
-    );
-  }
-
-  void _navigateToEditExpense(String id) {
-    final state = context.read<ExpenseBloc>().state;
-    if (state is ExpenseLoaded) {
-      final expense = state.expenses.firstWhere((e) => e.id == id);
-      Navigator.push(
-        context,
-        PageRouteBuilder(
-          pageBuilder: (context, animation, secondaryAnimation) =>
-              AddExpenseScreen(expense: expense),
-          transitionsBuilder: (context, animation, secondaryAnimation, child) {
-            return SlideTransition(
-              position: Tween<Offset>(
-                begin: const Offset(0, 0.3),
-                end: Offset.zero,
-              ).animate(CurvedAnimation(
-                parent: animation,
-                curve: Curves.easeOutCubic,
-              )),
-              child: FadeTransition(opacity: animation, child: child),
-            );
-          },
-          transitionDuration: const Duration(milliseconds: 400),
-        ),
-      );
-    }
-  }
-
-  void _deleteExpense(String id) {
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(20),
-        ),
-        title: const Text('Delete Expense'),
-        content: const Text('Are you sure you want to delete this expense?'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text('Cancel'),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              context.read<ExpenseBloc>().add(DeleteExpense(id: id));
-              Navigator.pop(ctx);
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Theme.of(context).colorScheme.error,
-            ),
-            child: const Text('Delete'),
-          ),
-        ],
-      ),
-    );
   }
 
   @override
@@ -202,7 +124,7 @@ class _HomeScreenState extends State<HomeScreen>
                     child: Row(
                       children: [
                         Expanded(
-                          child: _SummaryCard(
+                          child: SummaryCard(
                             title: 'Total Spending',
                             amount: currencyFormat.format(total),
                             icon: Icons.account_balance_wallet,
@@ -211,7 +133,7 @@ class _HomeScreenState extends State<HomeScreen>
                         ),
                         const SizedBox(width: 12),
                         Expanded(
-                          child: _SummaryCard(
+                          child: SummaryCard(
                             title: 'This Month',
                             amount: currencyFormat.format(thisMonthTotal),
                             icon: Icons.date_range,
@@ -264,8 +186,8 @@ class _HomeScreenState extends State<HomeScreen>
                       final expense = expenses[index];
                       return ExpenseTile(
                         expense: expense,
-                        onTap: () => _navigateToEditExpense(expense.id),
-                        onDelete: () => _deleteExpense(expense.id),
+                        onTap: () => navigateToEditExpense(context, expense.id),
+                        onDelete: () => confirmDeleteExpense(context, expense.id),
                       );
                     },
                   ),
@@ -303,73 +225,8 @@ class _HomeScreenState extends State<HomeScreen>
         },
       ),
       floatingActionButton: AnimatedFab(
-        onCameraTap: () => _navigateToAddExpense(scan: true),
-        onManualTap: () => _navigateToAddExpense(),
-      ),
-    );
-  }
-}
-
-class _SummaryCard extends StatelessWidget {
-  final String title;
-  final String amount;
-  final IconData icon;
-  final Color color;
-  final VoidCallback? onTap;
-
-  const _SummaryCard({
-    required this.title,
-    required this.amount,
-    required this.icon,
-    required this.color,
-    this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    return Card(
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(12),
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(6),
-                    decoration: BoxDecoration(
-                      color: color.withAlpha(30),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Icon(icon, size: 18, color: color),
-                  ),
-                  if (onTap != null) ...[
-                    const Spacer(),
-                    Icon(Icons.chevron_right, size: 18, color: theme.colorScheme.onSurfaceVariant.withAlpha(120)),
-                  ],
-                ],
-              ),
-              const SizedBox(height: 12),
-              Text(
-                amount,
-                style: theme.textTheme.titleLarge?.copyWith(
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              const SizedBox(height: 4),
-              Text(
-                title,
-                style: theme.textTheme.bodySmall?.copyWith(
-                  color: theme.colorScheme.onSurfaceVariant,
-                ),
-              ),
-            ],
-          ),
-        ),
+        onCameraTap: () => navigateToAddExpense(context, scan: true),
+        onManualTap: () => navigateToAddExpense(context),
       ),
     );
   }
